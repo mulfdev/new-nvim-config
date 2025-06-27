@@ -1,4 +1,5 @@
 -- Set <space> as the leader key
+--
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
@@ -33,7 +34,9 @@ end)
 
 -- Enable break indent
 vim.o.breakindent = true
-
+vim.o.wrap = true
+vim.o.linebreak = true
+vim.o.showbreak = '↪ '
 -- Save undo history
 vim.o.undofile = true
 
@@ -544,6 +547,20 @@ require('lazy').setup({
         end,
       })
 
+      local lspconfig = require 'lspconfig'
+      local configs = require 'lspconfig.configs'
+
+      configs.solidity = {
+        default_config = {
+          cmd = { 'nomicfoundation-solidity-language-server', '--stdio' },
+          filetypes = { 'solidity' },
+          root_dir = lspconfig.util.find_git_ancestor,
+          single_file_support = true,
+        },
+      }
+
+      lspconfig.solidity.setup {}
+
       -- Diagnostic Config
       -- See :help vim.diagnostic.Opts
       vim.diagnostic.config {
@@ -634,6 +651,7 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'eslint-lsp', -- Linter for JavaScript and TypeScript
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -686,207 +704,143 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
         python = { 'ruff' },
-        typescript = { 'prettier', stop_after_first = true },
-        typescriptreact = { 'prettier', stop_after_first = true },
+        -- Use a fallback to LSP formatting
+        typescript = { 'prettier', 'lsp_fallback' },
+        typescriptreact = { 'prettier', 'lsp_fallback' },
+        javascript = { 'prettier', 'lsp_fallback' },
         json = { 'prettier' },
         yaml = { 'prettier' },
+        solidity = { 'forge' },
         -- markdown = { 'prettier' },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
-        javascript = { 'prettier', stop_after_first = true },
+      },
+      formatters = {
+        forge = {
+          command = 'forge',
+          args = { 'fmt', '--raw', '-' },
+          stdin = true,
+        },
       },
     },
   },
 
-  -- { -- Autocompletion
-  --   'saghen/blink.cmp',
-  --   event = 'VimEnter',
-  --   version = '1.*',
-  --   dependencies = {
-  --     -- Snippet Engine
-  --     {
-  --       'L3MON4D3/LuaSnip',
-  --       version = '2.*',
-  --       build = (function()
-  --         -- Build Step is needed for regex support in snippets.
-  --         -- This step is not supported in many windows environments.
-  --         -- Remove the below condition to re-enable on windows.
-  --         if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-  --           return
-  --         end
-  --         return 'make install_jsregexp'
-  --       end)(),
-  --       dependencies = {
-  --         -- `friendly-snippets` contains a variety of premade snippets.
-  --         --    See the README about individual language/framework/plugin snippets:
-  --         --    https://github.com/rafamadriz/friendly-snippets
-  --         -- {
-  --         --   'rafamadriz/friendly-snippets',
-  --         --   config = function()
-  --         --     require('luasnip.loaders.from_vscode').lazy_load()
-  --         --   end,
-  --         -- },
-  --       },
-  --       opts = {},
-  --     },
-  --     'folke/lazydev.nvim',
-  --   },
-  --   --- @module 'blink.cmp'
-  --   --- @type blink.cmp.Config
-  --   opts = {
-  --     keymap = {
-  --       -- 'default' (recommended) for mappings similar to built-in completions
-  --       --   <c-y> to accept ([y]es) the completion.
-  --       --    This will auto-import if your LSP supports it.
-  --       --    This will expand snippets if the LSP sent a snippet.
-  --       -- 'super-tab' for tab to accept
-  --       -- 'enter' for enter to accept
-  --       -- 'none' for no mappings
-  --       --
-  --       -- For an understanding of why the 'default' preset is recommended,
-  --       -- you will need to read `:help ins-completion`
-  --       --
-  --       -- No, but seriously. Please read `:help ins-completion`, it is really good!
-  --       --
-  --       -- All presets have the following mappings:
-  --       -- <tab>/<s-tab>: move to right/left of your snippet expansion
-  --       -- <c-space>: Open menu or open docs if already open
-  --       -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-  --       -- <c-e>: Hide menu
-  --       -- <c-k>: Toggle signature help
-  --       --
-  --       -- See :h blink-cmp-config-keymap for defining your own keymap
-  --       preset = 'enter',
-  --
-  --       -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-  --       --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
-  --     },
-  --
-  --     appearance = {
-  --       -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
-  --       -- Adjusts spacing to ensure icons are aligned
-  --       nerd_font_variant = 'mono',
-  --     },
-  --
-  --     completion = {
-  --       -- By default, you may press `<c-space>` to show the documentation.
-  --       -- Optionally, set `auto_show = true` to show the documentation after a delay.
-  --       menu = {
-  --         enabled = true,
-  --         min_width = 15,
-  --         max_height = 10,
-  --         border = 'single', -- No border for clean look
-  --         winblend = 3, -- Add transparency (0-100, higher = more transparent)
-  --         scrollbar = false, -- Disable scrollbar as requested
-  --         -- Custom highlight groups for better styling
-  --         winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
-  --         scrolloff = 2,
-  --         direction_priority = { 's', 'n' },
-  --         auto_show = true,
-  --       },
-  --     },
-  --
-  --     sources = {
-  --       default = { 'lsp', 'path', 'snippets', 'lazydev' },
-  --       providers = {
-  --         lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
-  --       },
-  --     },
-  --
-  --     snippets = { preset = 'luasnip' },
-  --
-  --     -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
-  --     -- which automatically downloads a prebuilt binary when enabled.
-  --     --
-  --     -- By default, we use the Lua implementation instead, but you may enable
-  --     -- the rust implementation via `'prefer_rust_with_warning'`
-  --     --
-  --     -- See :h blink-cmp-config-fuzzy for more information
-  --     fuzzy = { implementation = 'rust' },
-  --
-  --     -- Shows a signature help window while you type arguments for a function
-  --     signature = {
-  --       enabled = true,
-  --       window = { -- Styling options go inside the 'window' table
-  --         border = 'single', -- Should match your LSP hover border
-  --         winblend = 4, -- Consistent with your vim.o.winblend and LSP hover
-  --         max_height = 6, -- Increased max_height, allows up to 6 lines
-  --         winhighlight = 'Normal:NormalFloat,FloatBorder:FloatBorder', -- Use your custom float highlights
-  --       },
-  --     },
-  --   },
-  -- },
-
-  {
-    'folke/tokyonight.nvim',
-    priority = 1000, -- Make sure to load this before all the other start plugins.
-    config = function()
-      ---@diagnostic disable-next-line: missing-fields
-      require('tokyonight').setup {
-        -- Set the base style you are targeting.
-        -- This should match the style you load with vim.cmd.colorscheme
-        style = 'night',
-
-        styles = {
-          comments = { italic = false }, -- Disable italics in comments
-          -- You can add other style preferences here, e.g.:
-          -- keywords = { italic = false },
-          -- functions = {},
-          -- variables = {},
-          -- sidebars = "dark",
-          -- floats = "dark",
-        },
-
-        -- This function is called with the theme's base color palette for the selected 'style'.
-        on_colors = function(colors)
-          local util = require 'tokyonight.util' -- Get the theme's utility functions
-
-          -- Factor for darkening: 0.75 means 75% of original color + 25% of black
-          local darken_factor = 0.85
-          local blend_base = '#000000' -- Pure black as the darkening target
-
-          -- Helper function to recursively darken colors in a table
-          local function darken_palette(palette)
-            for key, value in pairs(palette) do
-              if type(value) == 'string' and string.sub(value, 1, 1) == '#' then
-                -- Apply darkening to hex color strings
-                palette[key] = util.darken(value, darken_factor, blend_base)
-              elseif type(value) == 'table' then
-                -- If the value is a table (e.g., for `colors.git` or `colors.terminal`),
-                -- recursively darken its colors too.
-                -- We specifically exclude 'rainbow' as these are often fine as is.
-                if key ~= 'rainbow' then
-                  darken_palette(value)
-                end
-              end
-            end
+  { -- Autocompletion
+    'saghen/blink.cmp',
+    event = 'VimEnter',
+    version = '1.*',
+    dependencies = {
+      -- Snippet Engine
+      {
+        'L3MON4D3/LuaSnip',
+        version = '2.*',
+        build = (function()
+          -- Build Step is needed for regex support in snippets.
+          -- This step is not supported in many windows environments.
+          -- Remove the below condition to re-enable on windows.
+          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
+            return
           end
+          return 'make install_jsregexp'
+        end)(),
+        dependencies = {
+          -- `friendly-snippets` contains a variety of premade snippets.
+          --    See the README about individual language/framework/plugin snippets:
+          --    https://github.com/rafamadriz/friendly-snippets
+          -- {
+          --   'rafamadriz/friendly-snippets',
+          --   config = function()
+          --     require('luasnip.loaders.from_vscode').lazy_load()
+          --   end,
+          -- },
+        },
+        opts = {},
+      },
+      'folke/lazydev.nvim',
+    },
+    --- @module 'blink.cmp'
+    --- @type blink.cmp.Config
+    opts = {
+      keymap = {
+        -- 'default' (recommended) for mappings similar to built-in completions
+        --   <c-y> to accept ([y]es) the completion.
+        --    This will auto-import if your LSP supports it.
+        --    This will expand snippets if the LSP sent a snippet.
+        -- 'super-tab' for tab to accept
+        -- 'enter' for enter to accept
+        -- 'none' for no mappings
+        --
+        -- For an understanding of why the 'default' preset is recommended,
+        -- you will need to read `:help ins-completion`
+        --
+        -- No, but seriously. Please read `:help ins-completion`, it is really good!
+        --
+        -- All presets have the following mappings:
+        -- <tab>/<s-tab>: move to right/left of your snippet expansion
+        -- <c-space>: Open menu or open docs if already open
+        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
+        -- <c-e>: Hide menu
+        -- <c-k>: Toggle signature help
+        --
+        -- See :h blink-cmp-config-keymap for defining your own keymap
+        preset = 'enter',
 
-          -- Darken all colors in the main palette
-          darken_palette(colors)
+        -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
+        --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
+      },
 
-          -- Optional: After global darkening, you might need to adjust specific colors
-          -- for better contrast or readability. For example:
-          -- if colors.fg and (colors.bg_dark or colors.bg) then
-          --   colors.fg = util.lighten(colors.fg, 0.05, colors.bg_dark or colors.bg)
-          -- end
-          -- if colors.comment then
-          --   colors.comment = util.lighten(colors.comment, 0.05, colors.bg_dark or colors.bg)
-          -- end
-        end,
+      appearance = {
+        -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
+        -- Adjusts spacing to ensure icons are aligned
+        nerd_font_variant = 'mono',
+      },
 
-        -- Other tokyonight options can go here
-        -- terminal_colors = true,
-        -- transparent = false,
-      }
+      completion = {
+        -- By default, you may press `<c-space>` to show the documentation.
+        -- Optionally, set `auto_show = true` to show the documentation after a delay.
+        menu = {
+          enabled = true,
+          min_width = 15,
+          max_height = 10,
+          border = 'single', -- No border for clean look
+          winblend = 3, -- Add transparency (0-100, higher = more transparent)
+          scrollbar = false, -- Disable scrollbar as requested
+          -- Custom highlight groups for better styling
+          winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
+          scrolloff = 2,
+          direction_priority = { 's', 'n' },
+          auto_show = true,
+        },
+      },
 
-      -- Load the colorscheme here.
-      -- This will use the 'night' style as defined in the setup above,
-      -- and the on_colors function will have modified its palette.
-      vim.cmd.colorscheme 'tokyonight-night'
-    end,
+      sources = {
+        default = { 'lsp', 'path', 'snippets', 'lazydev' },
+        providers = {
+          lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+        },
+      },
+
+      snippets = { preset = 'luasnip' },
+
+      -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
+      -- which automatically downloads a prebuilt binary when enabled.
+      --
+      -- By default, we use the Lua implementation instead, but you may enable
+      -- the rust implementation via `'prefer_rust_with_warning'`
+      --
+      -- See :h blink-cmp-config-fuzzy for more information
+      fuzzy = { implementation = 'rust' },
+
+      -- Shows a signature help window while you type arguments for a function
+      signature = {
+        enabled = true,
+        window = { -- Styling options go inside the 'window' table
+          border = 'single', -- Should match your LSP hover border
+          winblend = 4, -- Consistent with your vim.o.winblend and LSP hover
+          max_height = 6, -- Increased max_height, allows up to 6 lines
+          winhighlight = 'Normal:NormalFloat,FloatBorder:FloatBorder', -- Use your custom float highlights
+        },
+      },
+    },
   },
 
   -- Highlight todo, notes, etc in comments
@@ -978,7 +932,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
@@ -1006,80 +960,8 @@ require('lazy').setup({
   },
 })
 
-local function list_tokyonight_colors()
-  -- Re-accessing the colors by calling the setup function from tokyonight.colors
-  -- This will use the options already configured by your main tokyonight.setup
-  -- and will re-run your on_colors function.
-  local colors = require('tokyonight.colors').setup()
-
-  if not colors then
-    vim.notify('TokyoNight colors not available. Is the theme loaded and configured?', vim.log.levels.WARN)
-    return
-  end
-
-  -- Format the output nicely
-  local output_lines = { 'TokyoNight Processed Colors:', '===========================' }
-
-  local function format_palette_recursive(palette, indent_level)
-    indent_level = indent_level or 0
-    local indent = string.rep('  ', indent_level)
-    local sorted_keys = {}
-    for k in pairs(palette) do
-      -- Skip internal keys or non-color values if desired
-      if string.sub(k, 1, 1) ~= '_' then
-        table.insert(sorted_keys, k)
-      end
-    end
-    table.sort(sorted_keys)
-
-    for _, key in ipairs(sorted_keys) do
-      local value = palette[key]
-      if type(value) == 'string' then -- Handles hex strings and "NONE"
-        table.insert(output_lines, string.format('%s%s = "%s"', indent, key, value))
-      elseif type(value) == 'table' then
-        table.insert(output_lines, string.format('%s%s = {', indent, key))
-        format_palette_recursive(value, indent_level + 1) -- Recurse
-        table.insert(output_lines, string.format('%s}', indent))
-      end
-    end
-  end
-
-  format_palette_recursive(colors, 0)
-
-  -- Display in a scrollable notification window
-  vim.notify(table.concat(output_lines, '\n'), vim.log.levels.INFO, {
-    title = 'TokyoNight Colors',
-    on_open = function(win)
-      if win and vim.api.nvim_win_is_valid(win) then
-        vim.wo[win].wrap = false -- Disable line wrapping
-        -- You could also set filetype to lua for syntax highlighting if desired
-        -- vim.bo[vim.api.nvim_win_get_buf(win)].filetype = "lua"
-      end
-    end,
-  })
-
-  -- Alternatively, for a simpler but less formatted output:
-  -- vim.notify(vim.inspect(colors), vim.log.levels.INFO, { title = "TokyoNight Colors" })
-end
-
--- Create the user command
-vim.api.nvim_create_user_command('ListTokyoNightColors', list_tokyonight_colors, { desc = 'List the currently processed TokyoNight colors' })
-
-vim.keymap.set('n', 'K', function()
-  vim.lsp.buf.hover {
-    border = 'single',
-    focusable = false,
-  }
-end, { desc = 'LSP Hover with border' })
-
--- Custom colors for floating windows (including LSP hover)
-vim.api.nvim_set_hl(0, 'NormalFloat', { bg = '#1f2335', fg = '#c0caf5' })
-vim.api.nvim_set_hl(0, 'FloatBorder', { fg = '#7aa2f7', bg = '#1f2335' })
-
 -- Set transparency for floating windows
 vim.o.winblend = 4
-
-vim.api.nvim_set_hl(0, 'BlinkCmpMenuSelection', { bg = '#21899d', fg = '#161720', bold = true })
 
 vim.o.tabstop = 4
 vim.o.shiftwidth = 4
@@ -1088,18 +970,10 @@ vim.o.expandtab = true
 vim.o.autoindent = true
 vim.g.editorconfig = true
 
--- 2 spaces for React files
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'javascriptreact', 'typescriptreact' },
-  callback = function()
-    vim.bo.tabstop = 2
-    vim.bo.shiftwidth = 2
-    vim.bo.softtabstop = 2
-  end,
-})
-
 vim.api.nvim_set_keymap('n', '<leader>wc', '<C-w>c', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<leader>ww', '<C-w>w', { noremap = true, silent = true })
+
+vim.cmd 'colorscheme kanagawa-dragon'
 
 vim.defer_fn(function()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
