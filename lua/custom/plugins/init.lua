@@ -77,12 +77,29 @@ return {
         sections = {
           lualine_a = { 'mode' },
           lualine_b = { 'branch' },
-          lualine_c = { 'diff' },
+          lualine_c = {
+            {
+              'filename',
+              fmt = function(str)
+                return '  ' .. str
+              end,
+            },
+          },
           lualine_x = { 'diagnostics', 'filetype' },
-          lualine_y = { 'encoding' },
-          lualine_z = { 'filename' },
+          lualine_y = { '' },
+          lualine_z = { 'encoding' },
         },
       }
     end,
+  },
+  {
+    'folke/noice.nvim',
+    event = 'VeryLazy',
+    opts = {
+      -- add any options here
+    },
+    dependencies = {
+      'MunifTanjim/nui.nvim',
+    },
   },
 }
