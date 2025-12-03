@@ -45,7 +45,7 @@ vim.o.ignorecase = true
 vim.o.smartcase = true
 
 -- Keep signcolumn on by default
-vim.o.signcolumn = 'yes'
+vim.o.signcolumn = 'no'
 
 -- Decrease update time
 vim.o.updatetime = 250
@@ -197,18 +197,18 @@ require('lazy').setup({
   -- options to `gitsigns.nvim`.
   --
   -- See `:help gitsigns` to understand what the configuration keys do
-  { -- Adds git related signs to the gutter, as well as utilities for managing changes
-    'lewis6991/gitsigns.nvim',
-    opts = {
-      signs = {
-        add = { text = '+' },
-        change = { text = '~' },
-        delete = { text = '_' },
-        topdelete = { text = '‾' },
-        changedelete = { text = '~' },
-      },
-    },
-  },
+  -- { -- Adds git related signs to the gutter, as well as utilities for managing changes
+  --   'lewis6991/gitsigns.nvim',
+  --   opts = {
+  --     signs = {
+  --       add = { text = '+' },
+  --       change = { text = '~' },
+  --       delete = { text = '_' },
+  --       topdelete = { text = '‾' },
+  --       changedelete = { text = '~' },
+  --     },
+  --   },
+  -- },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
@@ -547,47 +547,14 @@ require('lazy').setup({
         end,
       })
 
-      local lspconfig = require 'lspconfig'
-      local configs = require 'lspconfig.configs'
-
-      configs.solidity = {
-        default_config = {
-          cmd = { 'nomicfoundation-solidity-language-server', '--stdio' },
-          filetypes = { 'solidity' },
-          root_dir = lspconfig.util.find_git_ancestor,
-          single_file_support = true,
-        },
-      }
-
-      lspconfig.solidity.setup {}
-
       -- Diagnostic Config
       -- See :help vim.diagnostic.Opts
       vim.diagnostic.config {
+        virtual_text = false,
         severity_sort = true,
         float = { border = 'rounded', source = 'if_many' },
         underline = { severity = vim.diagnostic.severity.ERROR },
-        signs = vim.g.have_nerd_font and {
-          text = {
-            [vim.diagnostic.severity.ERROR] = '󰅚 ',
-            [vim.diagnostic.severity.WARN] = '󰀪 ',
-            [vim.diagnostic.severity.INFO] = '󰋽 ',
-            [vim.diagnostic.severity.HINT] = '󰌶 ',
-          },
-        } or {},
-        virtual_text = {
-          source = 'if_many',
-          spacing = 2,
-          format = function(diagnostic)
-            local diagnostic_message = {
-              [vim.diagnostic.severity.ERROR] = diagnostic.message,
-              [vim.diagnostic.severity.WARN] = diagnostic.message,
-              [vim.diagnostic.severity.INFO] = diagnostic.message,
-              [vim.diagnostic.severity.HINT] = diagnostic.message,
-            }
-            return diagnostic_message[diagnostic.severity]
-          end,
-        },
+        signs = false or {},
       }
 
       -- LSP servers and clients are able to communicate to each other what features they support.
@@ -633,6 +600,15 @@ require('lazy').setup({
             },
           },
         },
+
+        -- Biome LSP for JavaScript/TypeScript/JSON/etc formatting and linting
+        -- Only attaches when biome.json or biome.jsonc is present in the project root
+        biome = {
+          root_dir = function(fname)
+            local util = require 'lspconfig.util'
+            return util.root_pattern('biome.json', 'biome.jsonc')(fname)
+          end,
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -651,7 +627,8 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
-        'eslint-lsp', -- Linter for JavaScript and TypeScript
+        'prettier', -- Used to format markdown, javascript, typescript, json, yaml, etc.
+        'biome', -- Used to format and lint JavaScript, TypeScript, JSON, etc.
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -686,42 +663,100 @@ require('lazy').setup({
         desc = '[F]ormat buffer',
       },
     },
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          return nil
-        else
-          return {
-            timeout_ms = 500,
-            lsp_format = 'fallback',
-          }
+    opts = function()
+      -- Helper function to detect which formatter config is present
+      local function get_formatter_for_filetype()
+        local root_dir = vim.fn.getcwd()
+
+        -- Check for biome config
+        local biome_configs = { 'biome.json', 'biome.jsonc' }
+        for _, config in ipairs(biome_configs) do
+          if vim.fn.filereadable(root_dir .. '/' .. config) == 1 then
+            return 'biome'
+          end
         end
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        python = { 'ruff' },
-        -- Use a fallback to LSP formatting
-        typescript = { 'prettier', 'lsp_fallback' },
-        typescriptreact = { 'prettier', 'lsp_fallback' },
-        javascript = { 'prettier', 'lsp_fallback' },
-        json = { 'prettier' },
-        yaml = { 'prettier' },
-        solidity = { 'forge' },
-        -- markdown = { 'prettier' },
-      },
-      formatters = {
-        forge = {
-          command = 'forge',
-          args = { 'fmt', '--raw', '-' },
-          stdin = true,
+
+        -- Check for prettier config
+        local prettier_configs = {
+          '.prettierrc',
+          '.prettierrc.json',
+          '.prettierrc.yml',
+          '.prettierrc.yaml',
+          '.prettierrc.js',
+          '.prettierrc.cjs',
+          '.prettierrc.mjs',
+          'prettier.config.js',
+          'prettier.config.cjs',
+          'prettier.config.mjs',
+        }
+        for _, config in ipairs(prettier_configs) do
+          if vim.fn.filereadable(root_dir .. '/' .. config) == 1 then
+            return 'prettier'
+          end
+        end
+
+        -- Check package.json for prettier config
+        if vim.fn.filereadable(root_dir .. '/package.json') == 1 then
+          local ok, package_json = pcall(vim.fn.json_decode, vim.fn.readfile(root_dir .. '/package.json'))
+          if ok and package_json.prettier then
+            return 'prettier'
+          end
+        end
+
+        -- Default to prettier if no config found
+        return 'prettier'
+      end
+
+      local formatter = get_formatter_for_filetype()
+
+      return {
+        notify_on_error = false,
+        format_on_save = function(bufnr)
+          -- Disable "format_on_save lsp_fallback" for languages that don't
+          -- have a well standardized coding style. You can add additional
+          -- languages here or re-enable it for the disabled ones.
+          local disable_filetypes = { cpp = true }
+          if disable_filetypes[vim.bo[bufnr].filetype] then
+            return nil
+          else
+            return {
+              timeout_ms = 500,
+              lsp_format = 'fallback',
+            }
+          end
+        end,
+        formatters_by_ft = {
+          lua = { 'stylua' },
+          python = { 'ruff_format' },
+          c = { 'clang_format' },
+          -- Dynamically choose between biome and prettier based on config files
+          typescript = { formatter, 'lsp_fallback' },
+          typescriptreact = { formatter, 'lsp_fallback' },
+          javascript = { formatter, 'lsp_fallback' },
+          javascriptreact = { formatter, 'lsp_fallback' },
+          json = { formatter },
+          jsonc = { formatter },
+          css = { formatter },
+          html = { formatter },
+          yaml = { 'prettier' }, -- prettier is better for yaml
+          solidity = { 'forge' },
+          markdown = { 'prettier' }, -- prettier is better for markdown
         },
-      },
-    },
+        formatters = {
+          ruff_format = { -- Explicitly calls `ruff format` for Mason installs
+            command = 'ruff',
+            args = { 'format', '--quiet', '-' }, -- --quiet suppresses non-formatting output; stdin for buffer
+            stdin = true,
+            exit_on_error = true,
+          },
+          forge = {
+            command = 'forge',
+            args = { 'fmt', '--raw', '-' },
+            stdin = true,
+          },
+        },
+      }
+    end,
   },
 
   { -- Autocompletion
@@ -808,7 +843,7 @@ require('lazy').setup({
           winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
           scrolloff = 2,
           direction_priority = { 's', 'n' },
-          auto_show = true,
+          auto_show = false,
         },
       },
 
@@ -832,7 +867,7 @@ require('lazy').setup({
 
       -- Shows a signature help window while you type arguments for a function
       signature = {
-        enabled = true,
+        enabled = false,
         window = { -- Styling options go inside the 'window' table
           border = 'single', -- Should match your LSP hover border
           winblend = 4, -- Consistent with your vim.o.winblend and LSP hover
@@ -876,10 +911,6 @@ require('lazy').setup({
       -- cursor location to LINE:COLUMN
       ---@diagnostic disable-next-line: duplicate-set-field
       statusline.section_location = function()
-        return ''
-      end
-
-      statusline.section_fileinfo = function()
         return ''
       end
 
@@ -969,11 +1000,16 @@ vim.o.softtabstop = 4
 vim.o.expandtab = true
 vim.o.autoindent = true
 vim.g.editorconfig = true
+vim.opt.swapfile = false
+vim.o.list = false
+
+vim.o.laststatus = 0
+vim.o.showmode = false
 
 vim.api.nvim_set_keymap('n', '<leader>wc', '<C-w>c', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', '<leader>ww', '<C-w>w', { noremap = true, silent = true })
 
-vim.cmd 'colorscheme kanagawa-dragon'
+-- vim.cmd 'colorscheme kanagawa-dragon'
 
 vim.defer_fn(function()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
@@ -983,3 +1019,23 @@ vim.defer_fn(function()
     end
   end
 end, 10)
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'go',
+  callback = function()
+    -- Insert mode: Ctrl-e
+    vim.keymap.set('i', '<C-e>', 'if err != nil {<CR>}<Esc>O', { buffer = true })
+
+    -- Normal mode: Ctrl-e
+    vim.keymap.set('n', '<C-e>', 'oif err != nil {<CR>}<Esc>O', { buffer = true })
+  end,
+})
+
+vim.lsp.util.open_floating_preview = (function()
+  local orig = vim.lsp.util.open_floating_preview
+  return function(contents, syntax, opts, ...)
+    opts = opts or {}
+    opts.border = opts.border or 'rounded'
+    return orig(contents, syntax, opts, ...)
+  end
+end)()
