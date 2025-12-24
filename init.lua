@@ -3,6 +3,7 @@
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
+
 vim.g.maplocalleader = ' '
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
@@ -65,7 +66,7 @@ vim.o.splitbelow = true
 --  It is very similar to `vim.o` but offers an interface for conveniently interacting with tables.
 --   See `:help lua-options`
 --   and `:help lua-options-guide`
-vim.o.list = true
+vim.o.list = false
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
 -- Preview substitutions live, as you type!
@@ -100,12 +101,6 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
--- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
-
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
 --
@@ -114,12 +109,6 @@ vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left wind
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
-
--- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
--- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
--- vim.keymap.set("n", "<C-S-l>", "<C-w>L", { desc = "Move window to the right" })
--- vim.keymap.set("n", "<C-S-j>", "<C-w>J", { desc = "Move window to the lower" })
--- vim.keymap.set("n", "<C-S-k>", "<C-w>K", { desc = "Move window to the upper" })
 
 vim.api.nvim_create_autocmd('CmdlineLeave', {
   callback = function()
@@ -181,34 +170,6 @@ require('lazy').setup({
   --
   -- Use `opts = {}` to automatically pass options to a plugin's `setup()` function, forcing the plugin to be loaded.
   --
-
-  -- Alternatively, use `config = function() ... end` for full control over the configuration.
-  -- If you prefer to call `setup` explicitly, use:
-  --    {
-  --        'lewis6991/gitsigns.nvim',
-  --        config = function()
-  --            require('gitsigns').setup({
-  --                -- Your gitsigns configuration here
-  --            })
-  --        end,
-  --    }
-  --
-  -- Here is a more advanced example where we pass configuration
-  -- options to `gitsigns.nvim`.
-  --
-  -- See `:help gitsigns` to understand what the configuration keys do
-  -- { -- Adds git related signs to the gutter, as well as utilities for managing changes
-  --   'lewis6991/gitsigns.nvim',
-  --   opts = {
-  --     signs = {
-  --       add = { text = '+' },
-  --       change = { text = '~' },
-  --       delete = { text = '_' },
-  --       topdelete = { text = '‾' },
-  --       changedelete = { text = '~' },
-  --     },
-  --   },
-  -- },
 
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
@@ -554,7 +515,7 @@ require('lazy').setup({
         severity_sort = true,
         float = { border = 'rounded', source = 'if_many' },
         underline = { severity = vim.diagnostic.severity.ERROR },
-        signs = false or {},
+        signs = false,
       }
 
       -- LSP servers and clients are able to communicate to each other what features they support.
@@ -710,12 +671,14 @@ require('lazy').setup({
       local formatter = get_formatter_for_filetype()
 
       return {
-        notify_on_error = false,
+        notify_on_error = true,
+        notify_no_formatters = true, -- Add this
+        log_level = vim.log.levels.DEBUG,
         format_on_save = function(bufnr)
           -- Disable "format_on_save lsp_fallback" for languages that don't
           -- have a well standardized coding style. You can add additional
           -- languages here or re-enable it for the disabled ones.
-          local disable_filetypes = { cpp = true }
+          local disable_filetypes = {}
           if disable_filetypes[vim.bo[bufnr].filetype] then
             return nil
           else
@@ -730,10 +693,10 @@ require('lazy').setup({
           python = { 'ruff_format' },
           c = { 'clang_format' },
           -- Dynamically choose between biome and prettier based on config files
-          typescript = { formatter, 'lsp_fallback' },
-          typescriptreact = { formatter, 'lsp_fallback' },
-          javascript = { formatter, 'lsp_fallback' },
-          javascriptreact = { formatter, 'lsp_fallback' },
+          typescript = { formatter },
+          typescriptreact = { formatter },
+          javascript = { formatter },
+          javascriptreact = { formatter },
           json = { formatter },
           jsonc = { formatter },
           css = { formatter },
@@ -777,17 +740,7 @@ require('lazy').setup({
           end
           return 'make install_jsregexp'
         end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
-        },
+        dependencies = {},
         opts = {},
       },
       'folke/lazydev.nvim',
@@ -796,54 +749,60 @@ require('lazy').setup({
     --- @type blink.cmp.Config
     opts = {
       keymap = {
-        -- 'default' (recommended) for mappings similar to built-in completions
-        --   <c-y> to accept ([y]es) the completion.
-        --    This will auto-import if your LSP supports it.
-        --    This will expand snippets if the LSP sent a snippet.
-        -- 'super-tab' for tab to accept
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
-        --
-        -- For an understanding of why the 'default' preset is recommended,
-        -- you will need to read `:help ins-completion`
-        --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        --
-        -- All presets have the following mappings:
-        -- <tab>/<s-tab>: move to right/left of your snippet expansion
-        -- <c-space>: Open menu or open docs if already open
-        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-        -- <c-e>: Hide menu
-        -- <c-k>: Toggle signature help
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
         preset = 'enter',
-
-        -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-        --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
+        ['<Tab>'] = { 'accept', 'fallback' },
       },
 
       appearance = {
         -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
         -- Adjusts spacing to ensure icons are aligned
         nerd_font_variant = 'mono',
+        kind_icons = {
+          Text = '󰉿',
+          Method = '󰊕',
+          Function = '󰊕',
+          Constructor = '󰒓',
+          Field = '󰜢',
+          Variable = '󰀫',
+          Property = '󰖷',
+          Class = '󰠱',
+          Interface = '',
+          Struct = '󰙅',
+          Module = '',
+          Unit = '󰑭',
+          Value = '󰎠',
+          Enum = '',
+          EnumMember = '',
+          Keyword = '󰌋',
+          Constant = '󰏿',
+          Snippet = '',
+          Color = '󰏘',
+          File = '󰈙',
+          Reference = '󰈇',
+          Folder = '󰉋',
+          Event = '',
+          Operator = '󰆕',
+          TypeParameter = '󰗴',
+        },
       },
 
       completion = {
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
         menu = {
+          accept = {
+            auto_brackets = { enabled = false },
+          },
           enabled = true,
-          min_width = 15,
-          max_height = 10,
-          border = 'single', -- No border for clean look
-          winblend = 3, -- Add transparency (0-100, higher = more transparent)
-          scrollbar = false, -- Disable scrollbar as requested
-          -- Custom highlight groups for better styling
-          winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
+          min_width = 20,
+          max_height = 12,
+          border = 'rounded',
+          winblend = 4, -- matches your vim.o.winblend
+          scrollbar = false,
+          winhighlight = 'Normal:NormalFloat,FloatBorder:FloatBorder,CursorLine:PmenuSel,Search:None',
           scrolloff = 2,
           direction_priority = { 's', 'n' },
-          auto_show = false,
+          auto_show = true,
         },
       },
 
@@ -866,13 +825,15 @@ require('lazy').setup({
       fuzzy = { implementation = 'rust' },
 
       -- Shows a signature help window while you type arguments for a function
+
       signature = {
-        enabled = false,
-        window = { -- Styling options go inside the 'window' table
-          border = 'single', -- Should match your LSP hover border
-          winblend = 4, -- Consistent with your vim.o.winblend and LSP hover
-          max_height = 6, -- Increased max_height, allows up to 6 lines
-          winhighlight = 'Normal:NormalFloat,FloatBorder:FloatBorder', -- Use your custom float highlights
+        enabled = true,
+        window = {
+          border = 'rounded',
+          winblend = 4,
+          max_height = 4,
+          max_width = 60,
+          winhighlight = 'Normal:NormalFloat,FloatBorder:FloatBorder',
         },
       },
     },
@@ -898,24 +859,6 @@ require('lazy').setup({
       -- - sd'   - [S]urround [D]elete [']quotes
       -- - sr)'  - [S]urround [R]eplace [)] [']
       require('mini.surround').setup()
-
-      -- Simple and easy statusline.
-      --  You could remove this setup call if you don't like it,
-      --  and try some other statusline plugin
-      local statusline = require 'mini.statusline'
-      -- set use_icons to true if you have a Nerd Font
-      statusline.setup { use_icons = vim.g.have_nerd_font }
-
-      -- You can configure sections in the statusline by overriding their
-      -- default behavior. For example, here we set the section for
-      -- cursor location to LINE:COLUMN
-      ---@diagnostic disable-next-line: duplicate-set-field
-      statusline.section_location = function()
-        return ''
-      end
-
-      -- ... and there is more!
-      --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
   { -- Highlight, edit, and navigate code
@@ -954,7 +897,6 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   require 'kickstart.plugins.debug',
-  require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
   require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
@@ -1001,15 +943,9 @@ vim.o.expandtab = true
 vim.o.autoindent = true
 vim.g.editorconfig = true
 vim.opt.swapfile = false
-vim.o.list = false
 
-vim.o.laststatus = 0
-vim.o.showmode = false
-
-vim.api.nvim_set_keymap('n', '<leader>wc', '<C-w>c', { noremap = true, silent = true })
-vim.api.nvim_set_keymap('n', '<leader>ww', '<C-w>w', { noremap = true, silent = true })
-
--- vim.cmd 'colorscheme kanagawa-dragon'
+vim.keymap.set('n', '<leader>wc', '<C-w>c', { desc = '[W]indow [C]lose' })
+vim.keymap.set('n', '<leader>ww', '<C-w>w', { desc = '[W]indow [W]itch' })
 
 vim.defer_fn(function()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
@@ -1030,6 +966,21 @@ vim.api.nvim_create_autocmd('FileType', {
     vim.keymap.set('n', '<C-e>', 'oif err != nil {<CR>}<Esc>O', { buffer = true })
   end,
 })
+
+vim.lsp.config.protols = {
+  cmd = { 'protols' },
+  filetypes = { 'proto' },
+  root_markers = { '.git' },
+}
+
+vim.keymap.set('n', '<C-z>', 'u')
+vim.keymap.set('n', '<C-y>', '<C-r>')
+vim.keymap.set('n', '<C-s>', '<cmd>w<cr>')
+vim.keymap.set('i', '<C-s>', '<cmd>w<cr>')
+vim.keymap.set('n', '<C-a>', 'ggVG')
+vim.keymap.set('n', '<C-q>', '<cmd>q<cr>')
+
+vim.lsp.enable 'protols'
 
 vim.lsp.util.open_floating_preview = (function()
   local orig = vim.lsp.util.open_floating_preview

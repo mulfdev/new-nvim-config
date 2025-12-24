@@ -1,112 +1,103 @@
--- You can add your own plugins here or in other files in this directory!
---  I promise not to create any merge conflicts in this directory :)
---
--- See the kickstart.nvim README for more information
 return {
-  -- { -- A beautiful and configurable statusline
-  --   'nvim-lualine/lualine.nvim',
-  --   dependencies = { 'nvim-tree/nvim-web-devicons' },
-  --   config = function()
-  --     -- This color palette is a DIRECT TRANSLATION of the Kanagawa Dragon
-  --     -- theme variables from the source code you provided.
-  --     local colors = {
-  --       bg = '#282727', -- dragon_black_4 (main bar background)
-  --       active_bg = '#393836', -- dragon_black_5 (active window background)
-  --       fg = '#c8c093', -- old_white (main text color)
-  --       inactive_fg = '#a6a69c', -- dragon_gray (dimmed text)
-  --       mode_fg = '#16161d', -- sumi_ink_0 (text on mode indicators)
-  --
-  --       -- Mode Colors for the lualine mode indicator
-  --       normal = '#8ba4b0', -- dragon_blue_2
-  --       insert = '#87a987', -- dragon_green
-  --       visual = '#8992a7', -- dragon_violet
-  --       command = '#c4b28a', -- dragon_yellow
-  --       replace = '#c4746e', -- dragon_red
-  --     }
-  --
-  --     -- This theme perfectly mirrors the tmux status bar's flat design.
-  --     local kanagawa_tmux_match_theme = {
-  --       normal = {
-  --         a = { bg = colors.active_bg, fg = colors.fg, gui = 'bold' },
-  --         b = { bg = colors.bg, fg = colors.fg },
-  --         c = { bg = colors.bg, fg = colors.fg },
-  --       },
-  --       insert = { a = { bg = colors.insert, fg = colors.mode_fg, gui = 'bold' } },
-  --       visual = { a = { bg = colors.visual, fg = colors.mode_fg, gui = 'bold' } },
-  --       command = { a = { bg = colors.command, fg = colors.mode_fg, gui = 'bold' } },
-  --       replace = { a = { bg = colors.replace, fg = colors.mode_fg, gui = 'bold' } },
-  --       inactive = {
-  --         a = { bg = colors.bg, fg = colors.inactive_fg, gui = 'bold' },
-  --         b = { bg = colors.bg, fg = colors.inactive_fg },
-  --         c = { bg = colors.bg, fg = colors.inactive_fg },
-  --       },
-  --     }
-  --
-  --     -- Now we configure lualine itself
-  --     require('lualine').setup {
-  --       options = {
-  --         theme = 'auto',
-  --         -- Make separators empty for the clean, flat look
-  --         component_separators = { left = '', right = '' },
-  --         section_separators = { left = '', right = '' },
-  --         disabled_filetypes = {
-  --           statusline = {},
-  --           winbar = {},
-  --         },
-  --         always_divide_middle = true,
-  --       },
-  --       sections = {
-  --         lualine_a = { 'mode' },
-  --         lualine_b = { '' },
-  --         lualine_c = { 'filename' },
-  --         lualine_x = { 'diagnostics', 'filetype' },
-  --         lualine_y = { '' },
-  --         lualine_z = { 'encoding' },
-  --       },
-  --     }
-  --   end,
-  -- },
-  -- In lua/custom/plugins/init.lua, update your noice config:
   {
     'folke/noice.nvim',
     event = 'VeryLazy',
-    opts = {
-      lsp = {
-        hover = {
-          enabled = true,
-          silent = true,
-          opts = {
-            border = {
-              style = 'rounded',
-              padding = { 1, 2 },
-            },
-            size = {
-              max_width = 80,
-              max_height = 20,
-            },
-          },
-        },
-        signature = {
-          enabled = true, -- ← Re-enable noice signature
-          opts = {
-            border = {
-              style = 'rounded',
-              padding = { 1, 2 }, -- Same padding as hover
-            },
-            size = {
-              max_height = 8, -- Limit height
-              max_width = 80,
-            },
-          },
-        },
-      },
-      presets = {
-        lsp_doc_border = true,
-      },
-    },
     dependencies = {
       'MunifTanjim/nui.nvim',
+      'rcarriga/nvim-notify', -- optional
     },
+    opts = {
+      cmdline = {
+        view = 'cmdline_popup',
+      },
+      messages = {
+        enabled = true,
+      },
+      popupmenu = {
+        enabled = true,
+      },
+      lsp = {
+        override = {
+          ['vim.lsp.util.convert_input_to_markdown_lines'] = true,
+          ['vim.lsp.util.stylize_markdown'] = true,
+        },
+      },
+    },
+  },
+  {
+    'nvim-lualine/lualine.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      local colors = {
+        fg = '#bebec4',
+        bg = 'NONE',
+      }
+      local theme = {
+        normal = {
+          a = { fg = colors.fg, bg = colors.bg },
+          b = { fg = colors.fg, bg = colors.bg },
+          c = { fg = colors.fg, bg = colors.bg },
+          z = { fg = colors.fg, bg = colors.bg },
+        },
+        insert = {
+          a = { fg = colors.fg, bg = colors.bg },
+          b = { fg = colors.fg, bg = colors.bg },
+          c = { fg = colors.fg, bg = colors.bg },
+          z = { fg = colors.fg, bg = colors.bg },
+        },
+        visual = {
+          a = { fg = colors.fg, bg = colors.bg },
+          b = { fg = colors.fg, bg = colors.bg },
+          c = { fg = colors.fg, bg = colors.bg },
+          z = { fg = colors.fg, bg = colors.bg },
+        },
+        replace = {
+          a = { fg = colors.fg, bg = colors.bg },
+          b = { fg = colors.fg, bg = colors.bg },
+          c = { fg = colors.fg, bg = colors.bg },
+          z = { fg = colors.fg, bg = colors.bg },
+        },
+        command = {
+          a = { fg = colors.fg, bg = colors.bg },
+          b = { fg = colors.fg, bg = colors.bg },
+          c = { fg = colors.fg, bg = colors.bg },
+          z = { fg = colors.fg, bg = colors.bg },
+        },
+        inactive = {
+          a = { fg = colors.fg, bg = colors.bg },
+          b = { fg = colors.fg, bg = colors.bg },
+          c = { fg = colors.fg, bg = colors.bg },
+          z = { fg = colors.fg, bg = colors.bg },
+        },
+      }
+      local function relative_path()
+        local filepath = vim.fn.expand '%:p'
+        if filepath == '' then
+          return '[No File]'
+        end
+        local cwd = vim.fn.getcwd()
+        if filepath:sub(1, #cwd) == cwd then
+          return filepath:sub(#cwd + 2)
+        end
+        return vim.fn.expand '%:t'
+      end
+
+      require('lualine').setup {
+        options = {
+          theme = theme,
+          component_separators = { left = '', right = '' },
+          section_separators = { left = '', right = '' },
+        },
+        sections = {
+          lualine_a = { 'mode' },
+          lualine_b = { { 'branch', icon = '󰘬' } },
+          lualine_c = { { relative_path, icon = '󰉋' } },
+          lualine_x = {},
+          lualine_y = {},
+          lualine_z = {},
+        },
+      }
+    end,
   },
   {
     'folke/snacks.nvim',
