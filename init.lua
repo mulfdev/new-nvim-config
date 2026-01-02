@@ -20,7 +20,6 @@ vim.o.number = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
-
 -- Don't show the mode, since it's already in the status line
 vim.o.showmode = false
 vim.opt.termguicolors = true
@@ -672,8 +671,8 @@ require('lazy').setup({
 
       return {
         notify_on_error = true,
-        notify_no_formatters = true, -- Add this
-        log_level = vim.log.levels.DEBUG,
+        notify_no_formatters = false,
+        log_level = vim.log.levels.ERROR,
         format_on_save = function(bufnr)
           -- Disable "format_on_save lsp_fallback" for languages that don't
           -- have a well standardized coding style. You can add additional
@@ -795,6 +794,7 @@ require('lazy').setup({
           },
           enabled = true,
           min_width = 20,
+          max_width = 60,
           max_height = 12,
           border = 'rounded',
           winblend = 4, -- matches your vim.o.winblend
@@ -829,11 +829,14 @@ require('lazy').setup({
       signature = {
         enabled = true,
         window = {
+          min_width = 20,
+          max_width = 80,
+          max_height = 10,
           border = 'rounded',
           winblend = 4,
-          max_height = 4,
-          max_width = 60,
           winhighlight = 'Normal:NormalFloat,FloatBorder:FloatBorder',
+          scrollbar = false,
+          treesitter_highlighting = true,
         },
       },
     },
@@ -990,3 +993,5 @@ vim.lsp.util.open_floating_preview = (function()
     return orig(contents, syntax, opts, ...)
   end
 end)()
+
+vim.cmd 'colorscheme black_metal_nile'

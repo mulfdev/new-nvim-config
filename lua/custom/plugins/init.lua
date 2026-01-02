@@ -1,10 +1,67 @@
 return {
   {
+    'folke/flash.nvim',
+    event = 'VeryLazy',
+    opts = {
+      modes = {
+        search = {
+          enabled = true,
+        },
+      },
+    },
+    keys = {
+      {
+        's',
+        mode = { 'n', 'x', 'o' },
+        function()
+          require('flash').jump()
+        end,
+      },
+      {
+        'S',
+        mode = { 'n', 'x', 'o' },
+        function()
+          require('flash').treesitter()
+        end,
+      },
+      {
+        'r',
+        mode = 'o',
+        function()
+          require('flash').remote()
+        end,
+      },
+      {
+        'R',
+        mode = { 'o', 'x' },
+        function()
+          require('flash').treesitter_search()
+        end,
+      },
+      {
+        '<c-s>',
+        mode = { 'c' },
+        function()
+          require('flash').toggle()
+        end,
+      },
+    },
+  },
+  {
+    'rcarriga/nvim-notify',
+    config = function()
+      require('notify').setup {
+        level = vim.log.levels.ERROR,
+      }
+      vim.notify = require 'notify'
+    end,
+  },
+  {
     'folke/noice.nvim',
     event = 'VeryLazy',
     dependencies = {
       'MunifTanjim/nui.nvim',
-      'rcarriga/nvim-notify', -- optional
+      'rcarriga/nvim-notify',
     },
     opts = {
       cmdline = {
@@ -18,8 +75,27 @@ return {
       },
       lsp = {
         override = {
-          ['vim.lsp.util.convert_input_to_markdown_lines'] = true,
-          ['vim.lsp.util.stylize_markdown'] = true,
+          ['vim.lsp.util.convert_input_to_markdown_lines'] = false,
+          ['vim.lsp.util.stylize_markdown'] = false,
+          ['cmp.entry.get_documentation'] = false,
+        },
+        signature = {
+          enabled = false,
+        },
+        hover = {
+          enabled = false,
+        },
+        message = {
+          enabled = false,
+        },
+      },
+      routes = {
+        {
+          filter = {
+            event = 'notify',
+            find = 'No information available',
+          },
+          opts = { skip = true },
         },
       },
     },
@@ -84,7 +160,7 @@ return {
 
       require('lualine').setup {
         options = {
-          theme = theme,
+          theme = vim.g.black_metal_nile_lualine,
           component_separators = { left = '', right = '' },
           section_separators = { left = '', right = '' },
         },
@@ -147,7 +223,7 @@ return {
           },
         },
       }
-      vim.cmd 'colorscheme rose-pine'
+      -- vim.cmd 'colorscheme rose-pine'
     end,
   },
 }
