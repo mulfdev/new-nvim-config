@@ -211,29 +211,24 @@ require('lazy').setup({
   -- Treesitter (essential for modern syntax)
   {
     'nvim-treesitter/nvim-treesitter',
-    build = ':TSUpdate',
-    main = 'nvim-treesitter.configs',
-    opts = {
-      ensure_installed = {
-        'bash',
-        'c',
-        'cpp',
-        'lua',
-        'luadoc',
-        'markdown',
-        'markdown_inline',
-        'vim',
-        'vimdoc',
-        'go',
-        'rust',
-        'typescript',
-        'javascript',
-        'python',
-      },
-      auto_install = true,
-      highlight = { enable = true },
-      indent = { enable = true },
-    },
+    build = function()
+      -- Install parsers on plugin install/update only
+      require('nvim-treesitter')
+        .install({ 'bash', 'c', 'cpp', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'vim', 'vimdoc', 'go', 'rust', 'typescript', 'javascript', 'python' })
+        :wait(300000)
+    end,
+    config = function()
+      require('nvim-treesitter').setup {}
+
+      -- Enable highlighting and indentation for all filetypes with parsers
+      vim.api.nvim_create_autocmd('FileType', {
+        callback = function()
+          if pcall(vim.treesitter.start) then
+            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        end,
+      })
+    end,
   },
 
   -- Mason (LSP installer) - only for installing servers
@@ -242,7 +237,8 @@ require('lazy').setup({
     'mason-org/mason-lspconfig.nvim',
     dependencies = { 'mason-org/mason.nvim' },
     opts = {
-      ensure_installed = { 'lua_ls', 'gopls', 'rust_analyzer', 'ts_ls', 'pyright', 'clangd' },
+      -- Add/remove servers as needed. gopls needs Go, clangd needs C toolchain, rust_analyzer needs Rust
+      ensure_installed = { 'lua_ls', 'ts_ls', 'pyright' },
     },
   },
 
@@ -251,7 +247,8 @@ require('lazy').setup({
     'neovim/nvim-lspconfig',
     config = function()
       -- Enable LSP servers (native 0.11+ API)
-      vim.lsp.enable { 'lua_ls', 'gopls', 'rust_analyzer', 'ts_ls', 'pyright', 'clangd' }
+      -- Only enable servers you have installed
+      vim.lsp.enable { 'lua_ls', 'ts_ls', 'pyright' }
     end,
   },
 
