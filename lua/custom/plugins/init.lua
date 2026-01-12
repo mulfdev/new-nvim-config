@@ -1,7 +1,16 @@
 return {
   {
+    'nvim-treesitter/nvim-treesitter-context',
+    event = 'BufReadPost',
+    opts = {
+      max_lines = 5,
+      multiline_threshold = 20,
+      mode = 'cursor',
+    },
+  },
+  {
     'folke/flash.nvim',
-    event = 'VeryLazy',
+    event = 'BufReadPost',
     opts = {
       modes = {
         search = {
